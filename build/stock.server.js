@@ -1,13 +1,17 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 /*
  * @Author: John.Guan
- * @Date: 2018-05-27 21:05:47
+ * @Date: 2018-05-29 23:01:41
  * @Last Modified by: John.Guan
- * @Last Modified time: 2018-05-27 21:58:12
+ * @Last Modified time: 2018-05-29 23:31:56
  */
+Object.defineProperty(exports, "__esModule", { value: true });
 var express = require("express");
+var path = require("path");
+var ws_1 = require("ws");
 var app = express();
+// 处理静态资源
+app.use('/', express.static(path.join(__dirname, '..', 'client')));
 app.get('/api', function (req, res) {
     res.send('这里是首页');
 });
@@ -20,6 +24,37 @@ app.get('/api/stock/:id', function (req, res) {
 var server = app.listen(8080, 'localhost', function () {
     console.log('服务启动，地址8080');
 });
+// const wsServer = new Server({ port: 8081 });
+// wsServer.on('connection', websocket => {
+//   websocket.send('欢迎连接ws服务器');
+//   websocket.on('message', message => {
+//     console.log(`接收到客户端发送的消息${message}`);
+//   })
+// })
+// setInterval(() => {
+//   if (wsServer.clients) {
+//     wsServer.clients.forEach(client => {
+//       client.send('hahhaha');
+//     })
+//   }
+// }, 2000)
+var subscriptions = new Set(); //客户端集合
+var wsServer = new ws_1.Server({ port: 8081 });
+wsServer.on('connection', function (websocket) {
+    subscriptions.add(websocket); //客户端集合
+});
+var messageCount = 0;
+setInterval(function () {
+    subscriptions.forEach(function (subscription) {
+        // 判断是否还连接着
+        if (subscription.readyState === 1) {
+            subscription.send(JSON.stringify({ messageCount: messageCount++ }));
+        }
+        else {
+            subscriptions.delete(subscription);
+        }
+    });
+}, 2000);
 var Stock = /** @class */ (function () {
     function Stock(id, name, price, rating, desc, categories) {
         this.id = id;
